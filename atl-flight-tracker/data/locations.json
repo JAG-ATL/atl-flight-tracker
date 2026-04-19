@@ -1,0 +1,58 @@
+{
+  "marriott-atl": {
+    "name": "Marriott Gateway",
+    "lat": 33.64,
+    "lng": -84.444,
+    "distanceMiles": 1.2,
+    "shuttle": "Every 12 mins",
+    "phone": "404-331-0000"
+  },
+  "hilton-atl": {
+    "name": "Hilton Atlanta Airport",
+    "lat": 33.66,
+    "lng": -84.43,
+    "distanceMiles": 2.5,
+    "shuttle": "Departs Top of the Hour & :30 (24/7)",
+    "phone": "404-767-9000"
+  },
+  "westin-atl": {
+    "name": "Westin Atlanta Airport",
+    "lat": 33.65,
+    "lng": -84.44,
+    "distanceMiles": 1.5,
+    "shuttle": "Every 20 mins",
+    "phone": "404-762-7676"
+  },
+  "home2-atl-north": {
+    "name": "Home2 Suites Hilton Airport North",
+    "lat": 33.6521,
+    "lng": -84.4452,
+    "distanceMiles": 1.5,
+    "shuttle": "Scheduled (5:00 AM - Midnight)",
+    "phone": "404-477-1600"
+  },
+  "hgi-atl-north": {
+    "name": "Hilton Garden Inn Airport North",
+    "lat": 33.6558,
+    "lng": -84.4485,
+    "distanceMiles": 1.8,
+    "shuttle": "Complimentary (Call for hours)",
+    "phone": "404-477-6600"
+  },
+  "doubletree-atl": {
+    "name": "DoubleTree by Hilton Airport",
+    "lat": 33.6644,
+    "lng": -84.4285,
+    "distanceMiles": 2.2,
+    "shuttle": "Every 30 mins (24/7)",
+    "phone": "404-763-1600"
+  },
+  "fourpoints-west": {
+    "name": "Four Points by Sheraton Atlanta Airport West",
+    "lat": 33.661168,
+    "lng": -84.50035,
+    "distanceMiles": 3,
+    "shuttle": "Every 30 minutes",
+    "phone": "404-768-3100"
+  }
+}

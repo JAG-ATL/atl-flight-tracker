@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import FlightSearch from './components/FlightSearch';
 import FlightDetails from './components/FlightDetails';
+import Admin from './components/Admin';
 import { fetchLocation } from './api';
 import { CONFIG } from './config';
 import './index.css';
@@ -40,22 +41,37 @@ function FlightTrackerApp() {
   return (
     <div className="app-container">
       {/* Top Header */}
-      <header className="header-top animate-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header className="header-top animate-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ padding: '8px', background: 'rgba(56, 189, 248, 0.05)', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
             <img src="/logo.svg" alt="ATL Track Logo" style={{ width: '40px', height: '40px' }} />
           </div>
           <div>
             <h1 className="text-lg">ATL Track</h1>
-            <p className="text-xs text-secondary mt-1">
-              {hotelData ? `Currently at: ${hotelData.name}` : 'Hartsfield-Jackson Int.'}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <p className="text-xs text-secondary">
+                {hotelData ? `${hotelData.name}` : 'Hartsfield-Jackson Int.'}
+              </p>
+              {hotelData && (
+                <span style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: 'var(--text-accent)',
+                  boxShadow: '0 0 8px var(--text-accent)'
+                }}></span>
+              )}
+            </div>
           </div>
         </div>
-        {activeScreen === 'details' && (
+        {activeScreen === 'details' ? (
           <div className="flight-status-badge status-green">
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}></span>
             Live
+          </div>
+        ) : hotelData && (
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-accent)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Location Verified
           </div>
         )}
       </header>
@@ -81,7 +97,10 @@ function FlightTrackerApp() {
 export default function App() {
   return (
     <Router>
-      <FlightTrackerApp />
+      <Routes>
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/*" element={<FlightTrackerApp />} />
+      </Routes>
     </Router>
   );
 }

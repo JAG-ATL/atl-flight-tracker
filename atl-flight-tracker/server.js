@@ -7,19 +7,62 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 
+import admin from 'firebase-admin';
+
+console.log('Server script starting...');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '.env') });
+
+try {
+  dotenv.config({ path: path.join(__dirname, '.env') });
+} catch (e) {
+  // .env is optional
+}
+
+// Initialize Firebase Admin
+let db = null;
+try {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault()
+    });
+    db = admin.firestore();
+    console.log('Firebase Admin & Firestore initialized successfully');
+  } else {
+    console.log('Firebase credentials not found. Falling back to local locations.json');
+  }
+} catch (error) {
+  console.error('Firebase/Firestore initialization failed:', error.message);
+  db = null; // Ensure we fallback to local JSON
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3001;
+// Health Check Endpoints
+app.get('/healthz', (req, res) => res.status(200).send('OK'));
+app.get('/health-check', (req, res) => res.status(200).send('OK'));
+
+const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'data', 'locations.json');
 
 // --- Helper Functions ---
 async function readLocations() {
+  if (db) {
+    try {
+      const snapshot = await db.collection('locations').get();
+      const locations = {};
+      snapshot.forEach(doc => {
+        locations[doc.id] = doc.data();
+      });
+      return locations;
+    } catch (err) {
+      console.error('Firestore read error:', err);
+    }
+  }
+  
+  // Fallback to local JSON
   try {
     const data = await fs.readFile(DATA_FILE, 'utf-8');
     return JSON.parse(data);
@@ -29,71 +72,85 @@ async function readLocations() {
   }
 }
 
-async function writeLocations(locations) {
+async function writeLocations(locations, singleId = null) {
+  if (db && singleId) {
+    try {
+      if (locations[singleId]) {
+        await db.collection('locations').doc(singleId).set(locations[singleId]);
+      } else {
+        await db.collection('locations').doc(singleId).delete();
+      }
+      return;
+    } catch (err) {
+      console.error('Firestore write error:', err);
+    }
+  }
+
+  // Always write to local JSON as well (for backup/local dev)
   await fs.writeFile(DATA_FILE, JSON.stringify(locations, null, 2), 'utf-8');
 }
 
-// --- Location Management Endpoints ---
+// --- API Endpoints ---
 
-// Get all locations
+// Get all hotels/locations
 app.get('/api/locations', async (req, res) => {
   try {
     const locations = await readLocations();
-    res.json({ success: true, data: locations });
+    res.json(locations);
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to read locations' });
+    res.status(500).json({ error: 'Failed to read locations' });
   }
 });
 
-// Get a single location by ID
-app.get('/api/locations/:id', async (req, res) => {
-  try {
-    const locations = await readLocations();
-    const location = locations[req.params.id];
-    if (location) {
-      res.json({ success: true, data: location });
-    } else {
-      res.status(404).json({ success: false, error: 'Location not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to read location' });
-  }
-});
-
-// Add or update a location
+// Create or update a location
 app.post('/api/locations', async (req, res) => {
   try {
-    const { id, ...details } = req.body;
-    if (!id || !details.name) {
-      return res.status(400).json({ success: false, error: 'ID and Name are required' });
+    const { id, details } = req.body;
+    if (!id || !details) {
+      return res.status(400).json({ error: 'Missing ID or details' });
     }
     const locations = await readLocations();
     locations[id] = details;
-    await writeLocations(locations);
+    await writeLocations(locations, id);
     res.json({ success: true, data: locations[id] });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to save location' });
   }
 });
 
-// --- Proxy Endpoints (Existing Logic) ---
-
-app.get('/api/flight/:flightNumber', async (req, res) => {
+// Delete a location
+app.delete('/api/locations/:id', async (req, res) => {
   try {
-    const flightNumber = req.params.flightNumber.replace(/\s+/g, '').toUpperCase();
-    const params = {
-      access_key: process.env.VITE_AVIATIONSTACK_API_KEY,
-      flight_iata: flightNumber,
-      limit: 1
-    };
-    const response = await axios.get('http://api.aviationstack.com/v1/flights', { params });
+    const locations = await readLocations();
+    if (locations[req.params.id]) {
+      const idToDelete = req.params.id;
+      delete locations[idToDelete];
+      await writeLocations(locations, idToDelete);
+      res.json({ success: true, message: 'Location deleted' });
+    } else {
+      res.status(404).json({ success: false, error: 'Location not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to delete location' });
+  }
+});
+
+// Proxy flight data from AviationStack
+app.get('/api/flights', async (req, res) => {
+  try {
+    const { flight_iata } = req.query;
+    const apiKey = process.env.VITE_AVIATIONSTACK_API_KEY;
+    
+    const response = await axios.get('http://api.aviationstack.com/v1/flights', {
+      params: { access_key: apiKey, flight_iata }
+    });
+    
     if (response.data && response.data.data && response.data.data.length > 0) {
       res.json({ success: true, data: response.data.data[0] });
     } else {
       res.status(404).json({ success: false, error: 'Flight not found or active.' });
     }
   } catch (error) {
-    console.error('Error fetching flight from aviationstack:', error.message);
     // Mock Fallback
     res.json({ 
       success: true, 
@@ -146,4 +203,13 @@ app.get('/api/security-wait-times', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Proxy server running: http://localhost:${PORT}`));
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+console.log('[DEBUG] All routes registered. Attempting to start server...');
+app.listen(PORT, () => {
+  console.log(`[SUCCESS] App running and listening on port: ${PORT}`);
+});

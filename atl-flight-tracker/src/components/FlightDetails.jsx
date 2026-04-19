@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFlight, fetchTravelTime, fetchSecurityWaitTimes, updateLocation } from '../api';
+import { fetchFlight, fetchTravelTime, fetchSecurityWaitTimes } from '../api';
 import { CONFIG } from '../config';
 
 export default function FlightDetails({ flightNumber, hotelId, hotelData, onBack }) {
@@ -10,11 +10,6 @@ export default function FlightDetails({ flightNumber, hotelId, hotelData, onBack
   const [travelTime, setTravelTime] = useState(null);
   const [securityData, setSecurityData] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Editing state
-  const [isEditingShuttle, setIsEditingShuttle] = useState(false);
-  const [shuttleValue, setShuttleValue] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -68,31 +63,7 @@ export default function FlightDetails({ flightNumber, hotelId, hotelData, onBack
     loadAllData();
   }, [flightNumber, hotelId, hotelData]);
 
-  useEffect(() => {
-    if (hotelData?.shuttle) {
-      setShuttleValue(hotelData.shuttle);
-    }
-  }, [hotelData]);
 
-  const handleSaveShuttle = async () => {
-    setIsSaving(true);
-    try {
-      const res = await updateLocation(hotelId, {
-        ...hotelData,
-        shuttle: shuttleValue
-      });
-      if (res.success) {
-        setIsEditingShuttle(false);
-        // Note: In a real app, we might want to trigger a data refresh in the parent 'App.jsx'
-        // For this demo, we'll assume the local state update is sufficient or the user will reload.
-        window.location.reload(); // Quickest way to sync the updated JSON from backend
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -222,54 +193,41 @@ export default function FlightDetails({ flightNumber, hotelId, hotelData, onBack
                     <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                       {travelTime ? travelTime.durationText : 'Loading live traffic...'}
                     </p>
-                    {hotelData?.shuttle && !isEditingShuttle ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <p className="text-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-accent)' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="12 2 12 12 16 14"></polyline>
-                            <circle cx="12" cy="12" r="10"></circle>
-                          </svg>
-                          Shuttle: {hotelData.shuttle}
-                        </p>
-                        <button 
-                          onClick={() => setIsEditingShuttle(true)}
-                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                          title="Edit shuttle schedule"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
+                    {hotelData?.shuttle && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <p className="text-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-accent)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="12 2 12 12 16 14"></polyline>
+                              <circle cx="12" cy="12" r="10"></circle>
+                            </svg>
+                            Shuttle: {hotelData.shuttle}
+                          </p>
+                        </div>
+                        {hotelData.phone && (
+                          <a 
+                            href={`tel:${hotelData.phone}`}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              fontSize: '0.65rem', 
+                              color: 'var(--text-primary)', 
+                              textDecoration: 'none',
+                              background: 'rgba(255,255,255,0.05)',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid var(--surface-border)'
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                            Call
+                          </a>
+                        )}
                       </div>
-                    ) : isEditingShuttle ? (
-                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                        <input 
-                          className="input-field"
-                          style={{ fontSize: '0.75rem', padding: '4px 8px', height: 'auto', flex: 1 }}
-                          value={shuttleValue}
-                          onChange={(e) => setShuttleValue(e.target.value)}
-                          autoFocus
-                        />
-                        <button 
-                          className="btn-primary" 
-                          style={{ fontSize: '0.7rem', padding: '4px 10px' }}
-                          onClick={handleSaveShuttle}
-                          disabled={isSaving}
-                        >
-                          {isSaving ? '...' : 'Save'}
-                        </button>
-                        <button 
-                          style={{ background: 'none', border: '1px solid var(--surface-border)', color: 'var(--text-secondary)', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', padding: '4px 10px' }}
-                          onClick={() => {
-                            setIsEditingShuttle(false);
-                            setShuttleValue(hotelData.shuttle);
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
              </div>

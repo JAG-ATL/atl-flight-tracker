@@ -21,6 +21,19 @@ export const fetchFlight = async (flightNumber) => {
 };
 
 /**
+ * Fetch all location details
+ */
+export const fetchLocations = async () => {
+  try {
+    const response = await axios.get(`${PROXY_URL}/locations`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    return { success: false, error: 'Could not fetch hotels data.' };
+  }
+};
+
+/**
  * Fetch location details (hotel)
  * @param {string} hotelId 
  */
@@ -31,6 +44,19 @@ export const fetchLocation = async (hotelId) => {
   } catch (error) {
     console.error('Error fetching location:', error);
     return { success: false, error: 'Could not fetch hotel data.' };
+  }
+};
+
+/**
+ * Delete a location
+ */
+export const deleteLocation = async (hotelId) => {
+  try {
+    const response = await axios.delete(`${PROXY_URL}/locations/${hotelId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting location:', error);
+    return { success: false, error: 'Failed to delete location.' };
   }
 };
 
